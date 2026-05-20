@@ -340,7 +340,9 @@ document.getElementById("btnGenerate").onclick = function() {
           var evt = JSON.parse(raw);
           if (evt.type === "content_block_delta" && evt.delta && evt.delta.type === "text_delta") {
             fullText += evt.delta.text;
-            docEl.innerHTML = mdToHtml(fullText);
+            var idx = fullText.indexOf("\n#");
+            var display = idx > 0 ? fullText.slice(idx + 1) : (fullText.startsWith("#") ? fullText : "");
+            docEl.innerHTML = display ? mdToHtml(display) : "";
           }
         } catch(e) {}
       }

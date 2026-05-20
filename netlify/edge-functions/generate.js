@@ -32,6 +32,7 @@ export default async (request) => {
       model: "claude-sonnet-4-6",
       max_tokens: 8192,
       stream: true,
+      tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }],
       system: body.system,
       messages: body.messages
     })

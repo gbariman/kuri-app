@@ -1,2 +1,3 @@
-[functions.generate]
-  timeout = 26
+[[edge_functions]]
+  path = "/.netlify/functions/generate"
+  function = "generate"

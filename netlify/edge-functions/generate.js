@@ -1,11 +1,9 @@
-const { stream } = require("@netlify/functions");
-
-exports.handler = stream(async (event) => {
-  if (event.httpMethod !== "POST") {
+export default async (request) => {
+  if (request.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
   }
 
-  const API_KEY = process.env.ANTHROPIC_API_KEY;
+  const API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
   if (!API_KEY) {
     return new Response(JSON.stringify({ error: "API ključ ni nastavljen." }), {
       status: 500,
@@ -15,7 +13,7 @@ exports.handler = stream(async (event) => {
 
   let body;
   try {
-    body = JSON.parse(event.body);
+    body = await request.json();
   } catch (e) {
     return new Response(JSON.stringify({ error: "Napaka pri branju zahteve." }), {
       status: 400,
@@ -50,8 +48,7 @@ exports.handler = stream(async (event) => {
   return new Response(response.body, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "X-Accel-Buffering": "no"
+      "Cache-Control": "no-cache"
     }
   });
-});
+};

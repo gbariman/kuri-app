@@ -24,7 +24,7 @@ exports.handler = async function(event) {
         "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         max_tokens: 1500,
         system: body.system,
         messages: body.messages
@@ -32,6 +32,13 @@ exports.handler = async function(event) {
     });
 
     const data = await response.json();
+    if (!response.ok) {
+      return {
+        statusCode: response.status,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: data.error?.message || "Napaka pri generiranju." })
+      };
+    }
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },

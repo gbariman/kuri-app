@@ -92,12 +92,16 @@ input[type=text], input[type=number] { width: 100%; padding: 8px 10px; font-size
 <script>
 var SYS = "Si strokovni pomočnik za načrtovanje vzgojnega dela v slovenskem vrtcu po Kurikulumu za vrtce (2025). Ko dobis opis dejavnosti, ustvari strukturiran dokument v slovenscini z razdelki:\n# NASLOV\n**TRAJANJE:** ...\n## CILJI PO PODROČJIH\n### 👪 Družba\n- cilj 1\n- cilj 2\n### 🧸 Gibanje\n- cilj 1\n- cilj 2\n### 📖 Jezik\n- cilj 1\n- cilj 2\n### 🔢 Matematika\n- cilj 1\n- cilj 2\n### 🐻 Narava\n- cilj 1\n- cilj 2\n### 🎨 Umetnost\n- cilj 1\n- cilj 2\n## PREDVIDENE DEJAVNOSTI PO PODROČJIH\n(za vsako področje 3-5 dejavnosti, prilagojenih starosti otrok)\n## POSEBNI DOGODKI\n## EVALVACIJA\nPisi izkljucno v slovenscini. Dejavnosti prilagodi razvojnim znacilnostim otrok glede na podano starost.";
 
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
 function mdToHtml(md) {
   var lines = md.split("\n"), html = "", ul = false;
   for (var i = 0; i < lines.length; i++) {
     var l = lines[i].trim();
     if (!l || l === "---") { if (ul) { html += "</ul>"; ul = false; } continue; }
-    var s = l.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    var s = escHtml(l).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
     if (l.indexOf("# ") === 0 && l.indexOf("## ") !== 0) {
       if (ul) { html += "</ul>"; ul = false; }
       html += "<h1>" + s.replace(/^# /, "") + "</h1>";
@@ -159,11 +163,19 @@ document.getElementById("btnGenerate").onclick = function() {
     return r.json();
   })
   .then(function(d) {
-    var txt = d.content && d.content[0] ? d.content[0].text : "";
-    document.getElementById("doc").innerHTML = mdToHtml(txt);
     document.getElementById("loader").style.display = "none";
-    document.getElementById("out").style.display = "block";
     document.getElementById("btnGenerate").disabled = false;
+    if (d.error) {
+      errEl.innerHTML = "<div class='err'>Napaka: " + escHtml(d.error) + "</div>";
+      return;
+    }
+    var txt = d.content && d.content[0] ? d.content[0].text : "";
+    if (!txt) {
+      errEl.innerHTML = "<div class='err'>Ni odgovora. Prosim, poskusite znova.</div>";
+      return;
+    }
+    document.getElementById("doc").innerHTML = mdToHtml(txt);
+    document.getElementById("out").style.display = "block";
   })
   .catch(function(e) {
     document.getElementById("loader").style.display = "none";

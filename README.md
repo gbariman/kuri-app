@@ -1,4 +1,4 @@
-# kuri-app
+# kurikulum-app
 
 Slovenian-language web app for generating structured kindergarten curriculum plans (*načrti tematskih sklopov*) using Claude AI, grounded in the official **Kurikulum za vrtce (2025)**.
 

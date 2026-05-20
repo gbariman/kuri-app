@@ -1,50 +1,57 @@
-exports.handler = async function(event) {
+const { stream } = require("@netlify/functions");
+
+exports.handler = stream(async (event) => {
   if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method Not Allowed" };
+    return new Response("Method Not Allowed", { status: 405 });
   }
 
   const API_KEY = process.env.ANTHROPIC_API_KEY;
   if (!API_KEY) {
-    return { statusCode: 500, body: JSON.stringify({ error: "API ključ ni nastavljen." }) };
+    return new Response(JSON.stringify({ error: "API ključ ni nastavljen." }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 
   let body;
   try {
     body = JSON.parse(event.body);
-  } catch(e) {
-    return { statusCode: 400, body: JSON.stringify({ error: "Napaka pri branju zahteve." }) };
-  }
-
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01"
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 2048,
-        system: body.system,
-        messages: body.messages
-      })
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "Napaka pri branju zahteve." }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" }
     });
-
-    const data = await response.json();
-    if (!response.ok) {
-      return {
-        statusCode: response.status,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ error: data.error?.message || "Napaka pri generiranju." })
-      };
-    }
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    };
-  } catch(e) {
-    return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
   }
-};
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": API_KEY,
+      "anthropic-version": "2023-06-01"
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 2048,
+      stream: true,
+      system: body.system,
+      messages: body.messages
+    })
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    return new Response(JSON.stringify({ error: data.error?.message || "Napaka pri generiranju." }), {
+      status: response.status,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+
+  return new Response(response.body, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "X-Accel-Buffering": "no"
+    }
+  });
+});

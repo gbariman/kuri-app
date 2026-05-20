@@ -160,27 +160,48 @@ document.getElementById("btnGenerate").onclick = function() {
   })
   .then(function(r) {
     if (!r.ok) return r.text().then(function(t) { throw new Error(r.status + " – " + t); });
-    return r.json();
-  })
-  .then(function(d) {
-    document.getElementById("loader").style.display = "none";
-    document.getElementById("btnGenerate").disabled = false;
-    if (d.error) {
-      errEl.innerHTML = "<div class='err'>Napaka: " + escHtml(d.error) + "</div>";
-      return;
+
+    var fullText = "";
+    var reader = r.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = "";
+    var docEl = document.getElementById("doc");
+    var outEl = document.getElementById("out");
+    var loaderEl = document.getElementById("loader");
+
+    loaderEl.style.display = "none";
+    outEl.style.display = "block";
+
+    function pump(done, value) {
+      if (done) {
+        document.getElementById("btnGenerate").disabled = false;
+        return;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      var lines = buffer.split("\n");
+      buffer = lines.pop();
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line.startsWith("data: ")) continue;
+        var raw = line.slice(6);
+        if (raw === "[DONE]") continue;
+        try {
+          var evt = JSON.parse(raw);
+          if (evt.type === "content_block_delta" && evt.delta && evt.delta.type === "text_delta") {
+            fullText += evt.delta.text;
+            docEl.innerHTML = mdToHtml(fullText);
+          }
+        } catch(e) {}
+      }
+      return reader.read().then(function(res) { return pump(res.done, res.value); });
     }
-    var txt = d.content && d.content[0] ? d.content[0].text : "";
-    if (!txt) {
-      errEl.innerHTML = "<div class='err'>Ni odgovora. Prosim, poskusite znova.</div>";
-      return;
-    }
-    document.getElementById("doc").innerHTML = mdToHtml(txt);
-    document.getElementById("out").style.display = "block";
+
+    return reader.read().then(function(res) { return pump(res.done, res.value); });
   })
   .catch(function(e) {
     document.getElementById("loader").style.display = "none";
     document.getElementById("btnGenerate").disabled = false;
-    errEl.innerHTML = "<div class='err'>Napaka: " + e.message + "</div>";
+    errEl.innerHTML = "<div class='err'>Napaka: " + escHtml(e.message) + "</div>";
   });
 };
 
